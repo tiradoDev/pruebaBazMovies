@@ -1,7 +1,5 @@
 import Foundation
 
-import Foundation
-
 class MovieListInteractor: MovieListInteractorInputProtocol {
     weak var presenter: MovieListInteractorOutputProtocol?
     private let service: MovieServiceProtocol
@@ -10,10 +8,10 @@ class MovieListInteractor: MovieListInteractorInputProtocol {
         self.service = service
     }
     
-    func fetchMovies() {
+    func fetchMovies(category: MovieCategory) {
         Task {
             do {
-                let movies = try await service.fetchMovies()
+                let movies = try await service.fetchMovies(category: category)
                 presenter?.didFetchMovies(movies)
             } catch {
                 presenter?.didFailFetchMovies(error)

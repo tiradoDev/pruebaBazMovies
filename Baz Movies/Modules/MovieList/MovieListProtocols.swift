@@ -10,7 +10,7 @@ protocol MovieListInteractorOutputProtocol: AnyObject {
 // MARK: Presenter → Interactor (antes MovieListInteractorProtocol)
 protocol MovieListInteractorInputProtocol: AnyObject {
     var presenter: MovieListInteractorOutputProtocol? { get set }
-    func fetchMovies()
+    func fetchMovies(category: MovieCategory)
 }
 
 // MARK: Presenter Protocol: hereda de InteractorOutput
@@ -20,6 +20,7 @@ protocol MovieListPresenterProtocol: AnyObject, MovieListInteractorOutputProtoco
          router: MovieListRouterProtocol)
     func viewDidLoad()
     func didSelectMovie(at index: Int)
+    func didChangeCategory(to category: MovieCategory)
 }
 
 // MARK: View → Presenter (sin cambios)
