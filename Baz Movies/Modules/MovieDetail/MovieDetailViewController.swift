@@ -1,15 +1,8 @@
 import UIKit
+import SafariServices
 
 class MovieDetailViewController: UIViewController, MovieDetailViewProtocol {
-    func showError(_ error: any Error) {
-        DispatchQueue.main.async {
-            let alert = UIAlertController(title: "Error",
-                                          message: error.localizedDescription,
-                                          preferredStyle: .alert)
-            alert.addAction(.init(title: "OK", style: .default))
-            self.present(alert, animated: true)
-        }
-    }
+    // MARK: – Properties
     
     var presenter: MovieDetailPresenterProtocol!
     private var detail: MovieDetail?
@@ -103,6 +96,15 @@ class MovieDetailViewController: UIViewController, MovieDetailViewProtocol {
         return lbl
     }()
     
+    private let openHomepageButton: UIButton = {
+        let btn = UIButton(type: .system)
+        btn.setTitle("Open Website", for: .normal)
+        btn.titleLabel?.font = .systemFont(ofSize: 16, weight: .medium)
+        btn.translatesAutoresizingMaskIntoConstraints = false
+        btn.isHidden = true
+        return btn
+    }()
+    
     private lazy var stillsLayout: UICollectionViewFlowLayout = {
         let layout = UICollectionViewFlowLayout()
         layout.scrollDirection = .horizontal
@@ -128,26 +130,24 @@ class MovieDetailViewController: UIViewController, MovieDetailViewProtocol {
         super.viewDidLoad()
         view.backgroundColor = .systemBackground
         setupLayout()
+        openHomepageButton.addTarget(self, action: #selector(didTapOpenHomepage), for: .touchUpInside)
         presenter.viewDidLoad()
     }
     
     // MARK: – Layout
     
     private func setupLayout() {
-        // 1. ScrollView + ContentView
+        // ScrollView + ContentView
         view.addSubview(scrollView)
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         scrollView.addSubview(contentView)
         contentView.translatesAutoresizingMaskIntoConstraints = false
         
         NSLayoutConstraint.activate([
-            // ScrollView al superview
             scrollView.topAnchor.constraint(equalTo: view.topAnchor),
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            
-            // ContentView dentro de ScrollView
             contentView.topAnchor.constraint(equalTo: scrollView.topAnchor),
             contentView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
             contentView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
@@ -155,11 +155,12 @@ class MovieDetailViewController: UIViewController, MovieDetailViewProtocol {
             contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor)
         ])
         
-        // 2. Agregar subviews al contentView
+        // Add subviews
         [posterImageView,
          titleLabel, ratingLabel, genresLabel, infoLabel,
          statsStack,
          synopsisTitleLabel, synopsisLabel,
+         openHomepageButton,
          stillsCollectionView].forEach { contentView.addSubview($0) }
         
         statsStack.addArrangedSubview(languageLabel)
@@ -173,7 +174,7 @@ class MovieDetailViewController: UIViewController, MovieDetailViewProtocol {
             posterImageView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             posterImageView.heightAnchor.constraint(equalTo: posterImageView.widthAnchor, multiplier: 9/16),
             
-            // Título
+            // Title
             titleLabel.topAnchor.constraint(equalTo: posterImageView.bottomAnchor, constant: 16),
             titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             titleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
@@ -182,12 +183,12 @@ class MovieDetailViewController: UIViewController, MovieDetailViewProtocol {
             ratingLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 8),
             ratingLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
             
-            // Géneros
+            // Genres
             genresLabel.topAnchor.constraint(equalTo: ratingLabel.bottomAnchor, constant: 4),
             genresLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
             genresLabel.trailingAnchor.constraint(equalTo: titleLabel.trailingAnchor),
             
-            // Info (duración · año)
+            // Info (duration)
             infoLabel.topAnchor.constraint(equalTo: genresLabel.bottomAnchor, constant: 4),
             infoLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
             infoLabel.trailingAnchor.constraint(equalTo: titleLabel.trailingAnchor),
@@ -206,13 +207,17 @@ class MovieDetailViewController: UIViewController, MovieDetailViewProtocol {
             synopsisLabel.leadingAnchor.constraint(equalTo: titleLabel.leadingAnchor),
             synopsisLabel.trailingAnchor.constraint(equalTo: titleLabel.trailingAnchor),
             
-            // Video stills carousel
-            stillsCollectionView.topAnchor.constraint(equalTo: synopsisLabel.bottomAnchor, constant: 16),
+            // Open Homepage button
+            openHomepageButton.topAnchor.constraint(equalTo: synopsisLabel.bottomAnchor, constant: 16),
+            openHomepageButton.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            openHomepageButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            openHomepageButton.heightAnchor.constraint(equalToConstant: 44),
+            
+            // Carousel
+            stillsCollectionView.topAnchor.constraint(equalTo: openHomepageButton.bottomAnchor, constant: 16),
             stillsCollectionView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             stillsCollectionView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             stillsCollectionView.heightAnchor.constraint(equalToConstant: 90),
-            
-            // Fondo del contentView
             stillsCollectionView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -16)
         ])
     }
@@ -223,23 +228,23 @@ class MovieDetailViewController: UIViewController, MovieDetailViewProtocol {
         DispatchQueue.main.async {
             self.detail = detail
             
-            // Título
+            // Title
             self.titleLabel.text = detail.title
             
-            // Pintamos estrellas según la parte entera de rating (0–10)
+            // Stars + numeric rating
             let filledStars = Int(detail.voteAverage)
-            self.ratingLabel.text = String(repeating: "⭐️", count: filledStars) + " \(detail.voteAverage)"
+            self.ratingLabel.text = String(repeating: "⭐️", count: filledStars)
+                + " \(String(format: "%.1f", detail.voteAverage))"
             
-            // Géneros
-            let genreNames = detail.genres.map { $0.name }
-            self.genresLabel.text = genreNames.joined(separator: ", ")
+            // Genres
+            let names = detail.genres.map { $0.name }
+            self.genresLabel.text = names.joined(separator: ", ")
             
-            // Duración
-            let runtimeMinutes = detail.runtime ?? 0
-            let hours = runtimeMinutes / 60
-            let minutes = runtimeMinutes % 60
-            let durationText = "\(hours)h \(minutes)m"
-            self.infoLabel.text = "\(durationText)"
+            // Duration
+            let totalMins = detail.runtime ?? 0
+            let h = totalMins / 60
+            let m = totalMins % 60
+            self.infoLabel.text = "\(h)h \(m)m"
             
             // Stats
             self.languageLabel.setStat(
@@ -252,7 +257,7 @@ class MovieDetailViewController: UIViewController, MovieDetailViewProtocol {
             )
             self.collectionLabel.setStat(
                 title: "Collection",
-                detail: "\(detail.releaseDate)"
+                detail: "\(detail.revenue)"
             )
             
             // Synopsis
@@ -263,8 +268,32 @@ class MovieDetailViewController: UIViewController, MovieDetailViewProtocol {
                 self.posterImageView.loadImage(from: path)
             }
             
-            // Recargar carrusel
+            // Homepage button visibility
+            self.openHomepageButton.isHidden = detail.homepage == nil
+            
+            // Reload carousel
             self.stillsCollectionView.reloadData()
+        }
+    }
+    
+    @objc private func didTapOpenHomepage() {
+        guard
+            let urlString = detail?.homepage,
+            let url = URL(string: urlString)
+        else { return }
+        let safari = SFSafariViewController(url: url)
+        present(safari, animated: true)
+    }
+    
+    func showError(_ error: any Error) {
+        DispatchQueue.main.async {
+            let alert = UIAlertController(
+                title: "Error",
+                message: error.localizedDescription,
+                preferredStyle: .alert
+            )
+            alert.addAction(.init(title: "OK", style: .default))
+            self.present(alert, animated: true)
         }
     }
 }
@@ -282,11 +311,8 @@ extension MovieDetailViewController: UICollectionViewDataSource {
             withReuseIdentifier: CarouselImageCell.identifier,
             for: indexPath
         ) as! CarouselImageCell
-        
         let paths = [detail?.backdropPath, detail?.posterPath].compactMap { $0 }
-        let path = paths[indexPath.item]
-        cell.imageView.loadImage(from: path)
-        
+        cell.imageView.loadImage(from: paths[indexPath.item])
         return cell
     }
 }
