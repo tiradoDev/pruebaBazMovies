@@ -28,7 +28,7 @@ class MovieService: MovieServiceProtocol {
     }
     
     func fetchMovieDetail(id: Int) async throws -> MovieDetail {
-        let url = URL(string: "\(baseURL)/movie/\(id)")!
+        let url = URL(string: "\(baseURL)/\(id)")!
         var components = URLComponents(url: url, resolvingAgainstBaseURL: true)!
         components.queryItems = [
             URLQueryItem(name: "api_key",   value: apiKey),
