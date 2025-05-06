@@ -1,8 +1,7 @@
 
-
 import Foundation
 
-// MovieListPresenter.swift
+
 class MovieListPresenter: MovieListPresenterProtocol {
     private weak var view: MovieListViewProtocol?
     private let interactor: MovieListInteractorInputProtocol
